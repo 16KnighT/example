@@ -3,6 +3,7 @@ import requests
 from enum import Enum
 from typing import Optional
 
+#retrieves access token
 with open(os.path.expanduser('~') + "/.bvtoken.secret", 'r') as f:
     MY_TOKEN = f.readline()[:-1] #access token in hidden file
 
@@ -10,6 +11,7 @@ headers = {
     "Authorization": f"Bearer {MY_TOKEN}"
 }
 
+#acceptable stats for queues and devices
 class DeviceStats(Enum):
     CALLS = "calls"
     CALLS_MADE = "callsmade"
@@ -23,6 +25,7 @@ class QueueStats(Enum):
     ABANDONED = "abandoned"
     QUEUE = "queue"
 
+#acceptable time spans
 class TimeUnit(Enum):
     DAY = "86400"
     FIVE_DAYS = "432000"
@@ -30,16 +33,20 @@ class TimeUnit(Enum):
     TWO_WEEKS = "1209600"
     FOUR_WEEKS = "2419200"
 
+#base Xform class
 class BaseXform(Enum):
 
+    #checks if the class supports a specific stat
     @classmethod
     def supports_stat(cls, stat: str) -> bool:
         return stat in cls.__related_stats__
 
+    #returns a list of xforms in the class
     @classmethod
     def valid_xform(cls):
         return [member.value for member in cls]
 
+#subclasses for organisation
 class BaseDeviceXform(BaseXform):
     pass
 class BaseQueueXform(BaseXform):
@@ -134,6 +141,7 @@ class XformQueue(BaseQueueXform):
     MEAN_HOUR_BRIDGE = "meanhourbridge"
     MEAN_DAY_BRIDGE = "meandaybridge"
 
+#checks if the xform is acceptable depending on the stat
 def check_xform(xform, stat, cls):
     for enum_class in cls.__subclasses__():
         if enum_class.supports_stat(stat.value):
@@ -142,6 +150,7 @@ def check_xform(xform, stat, cls):
 
     return False
 
+#function for retrieving device stats
 def get_device_stats(device, stat: Optional[DeviceStats] = None, xform="", timespan: Optional[TimeUnit]=None, offset: Optional[TimeUnit]=None):
     
     if check_xform(xform, stat, BaseDeviceXform):
@@ -171,6 +180,7 @@ def get_device_stats(device, stat: Optional[DeviceStats] = None, xform="", times
         print("Error fetching stats")
         return None
 
+#function for retrieving queue stats
 def get_queue_stats(group, domain, stat=None, xform=None, timespan: Optional[TimeUnit]=None, offset: Optional[TimeUnit]=None):
 
     if check_xform(xform, stat, BaseQueueXform):
@@ -201,8 +211,8 @@ def get_queue_stats(group, domain, stat=None, xform=None, timespan: Optional[Tim
 devices = requests.get("https://www.babblevoice.com/api/device", headers=headers).json()
 print(f"number of devices on the server: {len(devices["rows"])}")
 
-#leighton_stats = get_device_stats("9022@omniis.babblevoice.com", DeviceStats.CALLS_ANSWERED, timespan=TimeUnit.FIVE_DAYS, xform=ValidXformsAnswered.SUM_RING_HOUR)
-#print(leighton_stats)
+leighton_stats = get_device_stats("9022@omniis.babblevoice.com", DeviceStats.CALLS_ANSWERED, timespan=TimeUnit.FIVE_DAYS, xform=ValidXformsAnswered.SUM_RING_HOUR)
+print(leighton_stats)
 
 queue_stats = get_queue_stats("Queue", "omniis.babblevoice.com", QueueStats.ABANDONED, XformQueue.SUM_DAY_WAIT, TimeUnit.DAY)
 print(queue_stats)
